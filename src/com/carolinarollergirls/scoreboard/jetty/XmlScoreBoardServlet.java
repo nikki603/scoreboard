@@ -50,7 +50,7 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 			return;
 		}
 
-		Document d = listener.getDocument();
+		Document d = listener.getDocument(LONGPOLL_TIMEOUT);
 		if (null == d) {
 			response.sendError(HttpServletResponse.SC_NOT_MODIFIED);
 		} else {
@@ -141,4 +141,5 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 
 	protected boolean debugGet = false;
 	protected boolean debugSet = false;
+	private int LONGPOLL_TIMEOUT = 10000;
 }

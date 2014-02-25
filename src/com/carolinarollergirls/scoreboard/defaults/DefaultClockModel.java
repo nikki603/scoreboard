@@ -135,6 +135,26 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
 		}
 	}
 
+	private long _lastTime = 0;
+	private void _scoreBoardChange(long time, long last) {
+		// Send precise time
+		scoreBoardChange(new ScoreBoardEvent(this, EVENT_TIME, time, last));
+	
+		// Send trimmed time (once per second) if needed
+		long ms = time % 1000;
+		time = time / 1000;
+		if (isCountDirectionDown() && ms > 0) {
+			// ms values will be rounded up, i.e. 1001-2000 ms converts to 2 sec.
+			time++;
+		}
+		time *= 1000;
+		// Send the time if the time doesn't match the last update
+		if (time != _lastTime) {
+			scoreBoardChange(new ScoreBoardEvent(this, EVENT_TIME_NORMALIZED, time, last));
+			_lastTime = time;
+		}
+	}
+
 	public long getTime() { return time; }
 	public void setTime(long ms) {
 		boolean doStop;
@@ -143,7 +163,7 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
 			if (isRunning() && isSyncTime())
 				ms = ((ms / 1000) * 1000) + (time % 1000);
 			time = checkNewTime(ms);
-			scoreBoardChange(new ScoreBoardEvent(this, EVENT_TIME, new Long(time), last));
+			_scoreBoardChange(new Long(time), last);
 			doStop = checkStop();
 		}
 		if (doStop)
@@ -157,7 +177,7 @@ public class DefaultClockModel extends DefaultScoreBoardEventProvider implements
 			if (sync && isRunning() && isSyncTime())
 				change = ((change / 1000) * 1000);
 			time = checkNewTime(time + change);
-			scoreBoardChange(new ScoreBoardEvent(this, EVENT_TIME, new Long(time), last));
+			_scoreBoardChange(new Long(time), last);
 			doStop = checkStop();
 		}
 		if (doStop)
