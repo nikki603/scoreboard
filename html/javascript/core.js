@@ -529,7 +529,6 @@ _crgScoreBoard = {
 		var $element = $(element);
 		var name = element.nodeName;
 		var id = $element.attr("Id");
-      if (name == "TimeNormalized") name = "Time";
 		var remove = _crgScoreBoard.hasXmlElementPI($element, "Remove");
 		var once = _crgScoreBoard.hasXmlElementPI($element, "Once");
 		var e = this.findScoreBoardElement(parent, name+(id?"("+id+")":""), remove, true);

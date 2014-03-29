@@ -22,6 +22,7 @@ import javax.servlet.http.*;
 
 import org.jdom.*;
 import org.jdom.output.*;
+import org.jdom.xpath.*;
 
 import com.carolinarollergirls.scoreboard.*;
 import com.carolinarollergirls.scoreboard.xml.*;
@@ -50,6 +51,9 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 			return;
 		}
 
+		if (null == listener.getDocumentFilter()) {
+			listener.setDocumentFilter(normalizedTimeDocumentFilter);
+		}
 		Document d = listener.getDocument(LONGPOLL_TIMEOUT);
 		if (null == d) {
 			response.sendError(HttpServletResponse.SC_NOT_MODIFIED);
@@ -80,6 +84,16 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 
 		scoreBoardModel.getXmlScoreBoard().mergeDocument(requestDocument);
 
+		response.setContentType("text/plain");
+		response.setStatus(HttpServletResponse.SC_OK);
+	}
+
+	protected void setNormalizedTime(HttpServletRequest request, HttpServletResponse response, Boolean nt) throws ServletException,IOException {
+		XmlListener listener = getXmlListenerForRequest(request);
+		if (nt)
+			listener.setDocumentFilter(normalizedTimeDocumentFilter);
+		else
+			listener.setDocumentFilter(millisecondTimeDocumentFilter);
 		response.setContentType("text/plain");
 		response.setStatus(HttpServletResponse.SC_OK);
 	}
@@ -129,6 +143,10 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 				get(request, response);
 			else if ("/debug".equals(request.getPathInfo()))
 				setDebug(request, response);
+			else if ("/normalizedTime".equals(request.getPathInfo()))
+				setNormalizedTime(request, response, true);
+			else if ("/millisecondTime".equals(request.getPathInfo()))
+				setNormalizedTime(request, response, false);
 			else if (request.getPathInfo().endsWith(".xml"))
 				getAll(request, response);
 			else if (!response.isCommitted())
@@ -142,4 +160,72 @@ public class XmlScoreBoardServlet extends AbstractXmlServlet
 	protected boolean debugGet = false;
 	protected boolean debugSet = false;
 	private int LONGPOLL_TIMEOUT = 10000;
-}
+	private TimeDocumentFilter normalizedTimeDocumentFilter = new TimeDocumentFilter(true);
+	private TimeDocumentFilter millisecondTimeDocumentFilter = new TimeDocumentFilter(true);
+
+	protected class TimeDocumentFilter implements SleepingQueueXmlScoreBoardListener.DocumentFilter {
+		public TimeDocumentFilter(Boolean Normalized) {
+			normalized = Normalized;
+
+			try {
+				millisecondExpression = XPath.newInstance("//ScoreBoard/Clock/Time");
+				normalizedExpression = XPath.newInstance("//ScoreBoard/Clock/TimeNormalized");
+			} catch (Exception e) {
+				System.out.printf("ERROR!! Filter: %s\n", e.toString());
+			}
+		}
+
+		// Return true if empty
+		private Boolean removeElement(Element e) {
+			Parent p = e.getParent();
+			p.removeContent(e);
+			p = p.getParent();
+			while (null != p) {
+				if (p.getContentSize() == 1)
+					p = p.getParent();
+				else
+					return false;
+			}
+			return true;
+		}
+
+		public Document Filter(Document d) {
+			java.util.List ms = null, ns = null;
+			Document d2 = (Document)d.clone();
+			try {
+				ms = millisecondExpression.selectNodes(d2.getRootElement());
+				ns = normalizedExpression.selectNodes(d2.getRootElement());
+			} catch (Exception e) {
+				// process entire document if error
+				return d;
+			}
+			if (ms.size() == 0 && ns.size() == 0)
+				return d;
+			if (normalized) {
+				// Strip out Millisecond Time
+				for (Object o : ms) {
+					Element e = (Element)o;
+					if (removeElement(e))
+						return null;
+				}
+				// Rename NormalizedTime to Time
+				for (Object o : ns) {
+					Element e = (Element)o;
+					e.setName("Time");
+				}
+			} else {
+				// Strip out NormalizedTime
+				for (Object o : ns) {
+					Element e = (Element)o;
+					if (removeElement(e))
+						return null;
+				}
+			}
+			return d2;
+		}
+
+		private XPath millisecondExpression;
+		private XPath normalizedExpression;
+		private Boolean normalized;
+	}
+}        

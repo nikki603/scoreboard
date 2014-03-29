@@ -32,8 +32,6 @@ public abstract class AbstractXmlServlet extends AbstractRegisterServlet
 {
 	protected void register(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		XmlListener listener = createXmlListener(scoreBoardModel);
-		if (this instanceof XmlScoreBoardServlet)
-			listener.setIgnoreTime(true);
 		String key = addRegisteredListener(listener);
 		response.setContentType("text/xml");
 		rawXmlOutputter.output(editor.createDocument("Key", null, key), response.getOutputStream());
@@ -55,13 +53,14 @@ public abstract class AbstractXmlServlet extends AbstractRegisterServlet
 	protected class XmlListener extends RegisteredListener
 	{
 		public XmlListener(ScoreBoard sB) {
-			queueListener = new SleepingQueueXmlScoreBoardListener(sB.getXmlScoreBoard());
+			queueListener = new SleepingQueueXmlScoreBoardListener(sB.getXmlScoreBoard(), null);
 		}
 
 		public Document getDocument(int timeout) { return queueListener.getNextDocument(timeout); }
+		public SleepingQueueXmlScoreBoardListener.DocumentFilter getDocumentFilter() { return queueListener.getDocumentFilter(); }
+		public void setDocumentFilter(SleepingQueueXmlScoreBoardListener.DocumentFilter df) { queueListener.setDocumentFilter(df); }
 
 		public boolean isEmpty() { return queueListener.isEmpty(); }
-		public void setIgnoreTime(boolean ignoreTime) { queueListener.setIgnoreTime(ignoreTime); }
 
 		protected SleepingQueueXmlScoreBoardListener queueListener;
 	}

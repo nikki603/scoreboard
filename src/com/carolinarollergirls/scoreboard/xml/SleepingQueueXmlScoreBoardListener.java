@@ -16,35 +16,16 @@ import org.jdom.*;
 public class SleepingQueueXmlScoreBoardListener extends QueueXmlScoreBoardListener
 {
 	public SleepingQueueXmlScoreBoardListener() { super(); }
-	public SleepingQueueXmlScoreBoardListener(XmlScoreBoard sb) { super(sb); }
+	public SleepingQueueXmlScoreBoardListener(XmlScoreBoard sb, DocumentFilter df) { super(sb); documentFilter = df; }
 
-	public void setIgnoreTime(boolean ignoreTime) {
-		this.ignoreTime = ignoreTime;
-	}
-
-	private StringBuilder treeCheck = new StringBuilder();
-	private boolean checkTree(Element e, int pos) {
-		if (pos == 0)
-			treeCheck.setLength(0);
-		if (pos > 3)
-			return false;
-		treeCheck.append('/');
-		treeCheck.append(e.getName());
-
-		boolean ret = true;
-		for (Object o : e.getChildren()) {
-			if (ret && !checkTree((Element)o, ++pos))
-				ret = false;
-		}
-		return true;
-	}
+	public DocumentFilter getDocumentFilter() { return documentFilter; }
+	public void setDocumentFilter(DocumentFilter df) { documentFilter = df; }
 
 	@Override
 	public void xmlChange(Document d) {
-		// If ignoreTime, look for single update containing ScoreBoard/Clock/Time and do nothing
-		if (ignoreTime) {
-			checkTree(d.getRootElement(), 0);
-			if (treeCheck.toString().equals("/document/ScoreBoard/Clock/Time"))
+		if (null != documentFilter) {
+			d = documentFilter.Filter(d);
+			if (null == d)
 				return;
 		}
 		synchronized (documentsLock) {
@@ -88,6 +69,10 @@ public class SleepingQueueXmlScoreBoardListener extends QueueXmlScoreBoardListen
 		}
 	}
 
+	public interface DocumentFilter {
+		public Document Filter(Document d);
+	}
+
+	private DocumentFilter documentFilter = null;
 	protected LinkedList<Thread> sleepingThreads = new LinkedList<Thread>();
-	private boolean ignoreTime = false;
 }
