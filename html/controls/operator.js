@@ -347,19 +347,26 @@ function createTeamTable() {
 		var sbTeam = $sb("ScoreBoard.Team("+team+")");
 		var first = (team == "1");
 
-		var nameTr = createRowTable(2).appendTo($("<td>").appendTo(nameRow)).find("tr");
+		var nameTr = createRowTable(3).appendTo($("<td>").appendTo(nameRow)).find("tr");
 		var scoreTr = createRowTable(3).appendTo($("<td>").appendTo(scoreRow)).find("tr");
 		var timeoutTr = createRowTable(4).appendTo($("<td>").appendTo(timeoutRow)).find("tr");
 		var jammerTr = createRowTable(2).appendTo($("<td>").appendTo(jammerRow)).find("tr");
 		var passTr = createRowTable(3).appendTo($("<td>").appendTo(passRow)).find("tr");
 
-		var nameTd = nameTr.children("td:eq("+(first?1:0)+")").addClass("Name");
+		var nameTd = nameTr.children("td:eq("+(first?2:0)+")").addClass("Name");
 		sbTeam.$sb("Name").$sbControl("<a/><input type='text' size='15'/>", { sbcontrol: {
 				editOnClick: true,
 				bindClickTo: nameTd
 			} }).appendTo(nameTd).filter("a").wrap("<div>");
+		var jerseyTd = nameTr.children("td:eq(1)").addClass("Jersey");
+		var jersey = sbTeam.$sb("AlternateName(jersey).Name").$sbControl("<a/><input type='text' size='15'/>", { sbcontrol: {
+				editOnClick: true,
+				bindClickTo: jerseyTd
+			} }).appendTo(jerseyTd).filter("a").wrap("<div>");
+		$sb("ScoreBoard.Team("+team+").Color(jersey_fg).Color").$sbBindAndRun("sbchange", function(event,value) { $(jersey).css('color', '#' + value); });
+		$sb("ScoreBoard.Team("+team+").Color(jersey_bg).Color").$sbBindAndRun("sbchange", function(event,value) { $(jerseyTd).css('background-color', '#' + value); });
 
-		var logoTd = nameTr.children("td:eq("+(first?0:1)+")").addClass("Logo");
+		var logoTd = nameTr.children("td:eq("+(first?0:2)+")").addClass("Logo");
 		var logoNone = $("<a>").html("No Logo").addClass("NoLogo").appendTo(logoTd);
 		var logoSelect = sbTeam.$sb("Logo").$sbControl("<select>", { sbelement: {
 				optionParent: "Images.Type(teamlogo)",
@@ -370,6 +377,10 @@ function createTeamTable() {
 			} }).appendTo(logoTd);
 		var logoImg = sbTeam.$sb("Logo").$sbElement("<img>")
 			.appendTo(logoTd);
+
+		nameTd.css("width", "50%");
+		jerseyTd.css("width", "25%");
+		logoTd.css("width", "25%");
 
 		var logoShowSelect = function(show) {
 			var showImg = !!sbTeam.$sb("Logo").$sbGet();
@@ -1002,7 +1013,7 @@ function createNewTeamTable(team, teamid) {
 	var teamTable = $("<table>").addClass("Team Hide").data("id", teamid)
 		.append($("<tr><td/></tr>").addClass("Control"))
 		.append($("<tr><td/></tr>").addClass("Skaters"));
-	var controlTable = createRowTable(5).appendTo(teamTable.find("tr.Control>td")).addClass("Control");
+	var controlTable = createRowTable(6).appendTo(teamTable.find("tr.Control>td")).addClass("Control");
 
 	team.$sb("Name").$sbControl("<input type='text'>")
 		.appendTo(controlTable.find("td:eq(0)"));
@@ -1016,12 +1027,15 @@ function createNewTeamTable(team, teamid) {
 	$("<button>").text("Alternate Names").button()
 		.click(function() { createAlternateNamesDialog(team); })
 		.appendTo(controlTable.find("td:eq(2)"));
+	$("<button>").text("Colors").button()
+		.click(function() { createColorsDialog(team); })
+		.appendTo(controlTable.find("td:eq(3)"));
 	$("<button>").text("Assign Team").button({ disabled: isCurrentTeam })
 		.click(function() { createTeamsAssignDialog(teamid); })
-		.appendTo(controlTable.find("td:eq(3)"));
+		.appendTo(controlTable.find("td:eq(4)"));
 	$("<button>").text("Remove Team").button({ disabled: isCurrentTeam })
 		.click(function() { createTeamsRemoveDialog(teamid); })
-		.appendTo(controlTable.find("td:eq(4)"));
+		.appendTo(controlTable.find("td:eq(5)"));
 
 	var skatersTable = $("<table>").addClass("Skaters Empty")
 		.appendTo(teamTable.find("tr.Skaters>td"))
@@ -1147,6 +1161,7 @@ function createAlternateNamesDialog(team) {
 	newIdInput.autocomplete({
 		minLength: 0,
 		source: [
+			{ label: "jersey (SO Controls)", value: "jersey" },
 			{ label: "mobile (Mobile Control)", value: "mobile" },
 			{ label: "overlay (Video Overlay)", value: "overlay" },
 			{ label: "twitter (Twitter)", value: "twitter" }
@@ -1155,6 +1170,112 @@ function createAlternateNamesDialog(team) {
 
 	dialog.dialog({
 		title: "Alternate Names",
+		modal: true,
+		width: 700,
+		close: function() { doExit = 1; $(this).dialog("destroy").remove(); },
+		buttons: { Close: function() { $(this).dialog("close"); } }
+	});
+}
+
+function createColorsDialog(team) {
+	var dialog = $("<div>").addClass("ColorsDialog");
+
+	$("<a>").text("Type:").appendTo(dialog);
+	var newIdInput = $("<input type='text'>").appendTo(dialog);
+	$("<a>").text("Color:").appendTo(dialog);
+	var newColorInput = $("<input type='text'>").appendTo(dialog);
+	$(newColorInput).ColorPicker({
+		onSubmit: function(hsb, hex, rgb, el) {
+			$(el).val(hex);
+			$(el).ColorPickerHide();
+		},
+		onBeforeShow: function () {
+			$(this).ColorPickerSetColor(this.value);
+		},
+		onShow: function (colpkr) {
+			$(colpkr).zIndex(2000);
+		}
+	})
+	.bind('keyup', function(){
+		$(this).ColorPickerSetColor(this.value);
+	});
+
+	var newFunc = function() {
+		var newId = newIdInput.val();
+		var newColor = newColorInput.val();
+		team.$sb("Color("+newId+").Color").$sbSet(newColor);
+		newColorInput.val("");
+		newIdInput.val("").focus();
+	};
+
+	newColorInput.keypress(function(event) {
+		if (event.which == 13) // Enter
+			newFunc();
+	});
+	$("<button>").button({ label: "Add" }).click(newFunc)
+		.appendTo(dialog);
+
+	var table = $("<table>").appendTo(dialog);
+	$("<tr>")
+		.append("<th class='X'>X</th>")
+		.append("<th class='Id'>Id</th>")
+		.append("<th class='Color'>Color</th>")
+		.appendTo(table);
+
+	var doExit = 0;
+	var addFunc = function(event, node) {
+		if (doExit) {
+			$(this).unbind(event);
+			return;
+		}
+		var tr = $("<tr>").attr("data-id", node.$sbId)
+			.append("<td class='X'>")
+			.append("<td class='Id'>")
+			.append("<td class='Color'>");
+		$("<button>").button({ label: "X" })
+			.click(function() { node.$sbRemove(); })
+			.appendTo(tr.children("td.X"));
+		tr.children("td.Id").text(node.$sbId);
+		var c = node.$sb("Color").$sbControl("<input type='text' size='20'>").appendTo(tr.children("td.Color"));
+		$(c).ColorPicker({
+			onSubmit: function(hsb, hex, rgb, el) {
+				$(el).val(hex);
+				$(el).change();
+				$(el).ColorPickerHide();
+			},
+			onBeforeShow: function () {
+				$(this).ColorPickerSetColor(this.value);
+			},
+			onShow: function (colpkr) {
+				$(colpkr).zIndex(2000);
+			}
+		})
+		.bind('keyup', function(){
+			$(this).ColorPickerSetColor(this.value);
+		});
+		tr.appendTo(table);
+	};
+	var removeFunc = function(event, node) {
+		if (doExit)
+			$(this).unbind(event);
+		else
+			table.find("tr[data-id='"+node.$sbId+"']").remove();
+	};
+
+	team.$sbBindAddRemoveEach("Color", addFunc, removeFunc);
+
+	newIdInput.autocomplete({
+		minLength: 0,
+		source: [
+			{ label: "jersey_fg (SO Controls Foreground)", value: "jersey_fg" },
+			{ label: "jersey_bg (SO Controls Background)", value: "jersey_bg" },
+			{ label: "overlay_fg (Video Overlay Foreground)", value: "overlay_fg" },
+			{ label: "overlay_bg (Video Overlay Background)", value: "overlay_bg" }
+		]
+	}).focus(function() { $(this).autocomplete("search", ""); });
+
+	dialog.dialog({
+		title: "Colors",
 		modal: true,
 		width: 700,
 		close: function() { doExit = 1; $(this).dialog("destroy").remove(); },
