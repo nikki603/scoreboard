@@ -105,7 +105,15 @@ public class ScoreBoardXmlListener implements ScoreBoardListener
 		} else if (p.getProviderName().equals("Skater")) {
 			editor.setElement(getSkaterElement((Skater)p), prop, null, v);
 		} else if (p.getProviderName().equals("Clock")) {
-			editor.setElement(getClockElement((Clock)p), prop, null, v);
+			Element e = editor.setElement(getClockElement((Clock)p), prop, null, v);
+			if (prop.equals("Time")) {
+				try {
+					long time = ((Long)event.getValue()).longValue();
+					long prevTime = ((Long)event.getPreviousValue()).longValue();
+					if (time/1000 != prevTime/1000)
+						e.setAttribute("SecondChange", "true");
+				} catch (Exception ee) { }
+			}
 		} else if (p.getProviderName().equals("Policy")) {
 			editor.setElement(getPolicyElement((Policy)p), prop, null, v);
 		} else if (p.getProviderName().equals("Parameter")) {
