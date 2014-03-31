@@ -61,6 +61,10 @@ public class XmlDocumentEditor
 		return document;
 	}
 
+	public boolean isEmptyDocument(Document d) {
+		return !(d.hasRootElement() && (d.getRootElement().getChildren().size() > 0));
+	}
+
 	public Element addElement(Element parent, String name) {
 		return addElement(parent, name, null, null);
 	}
@@ -397,6 +401,29 @@ public class XmlDocumentEditor
 		}
 	}
 
+	public void filterOutDocumentXPath(Document d, XPath filter) throws JDOMException {
+		filterOutElementXPath(d.getRootElement(), filter);
+	}
+	public void filterOutElementXPath(Element e, XPath filter) throws JDOMException {
+		if (e == null || filter == null)
+			return;
+		List nodes = filter.selectNodes(e);
+		Iterator i = nodes.iterator();
+		while (i.hasNext()) {
+			Element r = (Element)i.next();
+			Element p = r.getParentElement();
+			i.remove();
+			while (p != e && p != null) {
+				Element nextP = p.getParentElement();
+				if (p.getChildren().size() == 0 && !nodes.contains(p)) {
+					p.detach();
+					p = nextP;
+				} else {
+					break;
+				}
+			}
+		}
+	}
 	public void filterElementXPath(Element e, XPath filter) throws JDOMException {
 		if (e == null || filter == null)
 			return;
