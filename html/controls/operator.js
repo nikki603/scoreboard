@@ -363,8 +363,14 @@ function createTeamTable() {
 				editOnClick: true,
 				bindClickTo: jerseyTd
 			} }).appendTo(jerseyTd).filter("a").wrap("<div>");
-		$sb("ScoreBoard.Team("+team+").Color(jersey_fg).Color").$sbBindAndRun("sbchange", function(event,value) { $(jersey).css('color', '#' + value); });
-		$sb("ScoreBoard.Team("+team+").Color(jersey_bg).Color").$sbBindAndRun("sbchange", function(event,value) { $(jerseyTd).css('background-color', '#' + value); });
+		$sb("ScoreBoard.Team("+team+").Color(jersey_fg).Color").$sbBindAndRun("sbchange", function(event,val) {
+			if (val == null || $.trim(val) == "") val = '';
+			$(jersey).css('color', val);
+		});
+		$sb("ScoreBoard.Team("+team+").Color(jersey_bg).Color").$sbBindAndRun("sbchange", function(event,val) {
+			if (val == null || $.trim(val) == "") val = '';
+			$(jerseyTd).css('background-color', val);
+		});
 
 		var logoTd = nameTr.children("td:eq("+(first?0:2)+")").addClass("Logo");
 		var logoNone = $("<a>").html("No Logo").addClass("NoLogo").appendTo(logoTd);
@@ -1186,7 +1192,7 @@ function createColorsDialog(team) {
 	var newColorInput = $("<input type='text'>").appendTo(dialog);
 	$(newColorInput).ColorPicker({
 		onSubmit: function(hsb, hex, rgb, el) {
-			$(el).val(hex);
+			$(el).val('#' + hex);
 			$(el).ColorPickerHide();
 		},
 		onBeforeShow: function () {
@@ -1239,7 +1245,7 @@ function createColorsDialog(team) {
 		var c = node.$sb("Color").$sbControl("<input type='text' size='20'>").appendTo(tr.children("td.Color"));
 		$(c).ColorPicker({
 			onSubmit: function(hsb, hex, rgb, el) {
-				$(el).val(hex);
+				$(el).val('#' + hex);
 				$(el).change();
 				$(el).ColorPickerHide();
 			},
